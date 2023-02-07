@@ -3,12 +3,10 @@ import requests
 import re
 import pandas as pd
 
-# Make a request to the URL of the web page
 
-
-def get_data(url, end_page):
-    df = pd.DataFrame(columns=["Title", "Salary", "Company", "Experience",
-                               "Employment Type", "Is_Hot", "Link"])
+def scrape_data(url, end_page):
+    columns = ["Title", "Salary", "Company", "Experience", "Employment Type", "Is_Hot", "Link"]
+    job_data = pd.DataFrame(columns=columns)
 
     for page_number in range(1, end_page + 1):
         response = requests.get(url.format(page_number))
@@ -22,11 +20,9 @@ def get_data(url, end_page):
             soup = BeautifulSoup(html_content, "lxml")
 
             # Make a pattern to gather all divs where classnames starting with this card card-hover card-visited
-            pattern = re.compile("^card card-hover card-visited.*")
-
-            # Finding all divs on a page
-            divs = soup.find_all("div", class_=pattern)
-            for div in divs:
+            div_pattern = re.compile("^card card-hover card-visited.*")
+            job_divs = soup.find_all("div", class_=div_pattern)
+            for div in job_divs:
                 """
                 Looking a data for this columns:
                 title; link; salary; company_name; is_hot; experience; employment_type; 
@@ -55,22 +51,31 @@ def get_data(url, end_page):
 
                 employment_type = div.find("p").text.split(".")[0].replace(" ", "").replace("\n", "")
                 # Add current job to a Frame
-                job = pd.DataFrame(
-                    {"Title": [title], "Salary": [salary], "Company": [company_name], "Experience": [experience],
-                     "Employment Type": [employment_type], "Is_Hot": [is_hot], "Link": [link]})
-                df = pd.concat([df, job], ignore_index=True)
+                job = pd.DataFrame({
+                    "Title": [title],
+                    "Salary": [salary],
+                    "Company": [company_name],
+                    "Experience": [experience],
+                    "Employment Type": [employment_type],
+                    "Is_Hot": [is_hot],
+                    "Link": [link]
+                })
+                job_data = pd.concat([job_data, job], ignore_index=True)
         else:
             return "ERROR"
     # Making csv
-    df.to_csv("WorkUa.csv", index=False)
+    job_data.to_csv("WorkUa.csv", index=False)
+    return job_data
 
 
-def show_data():
-    df = pd.read_csv("WorkUa.csv")
-    print(df)
-    print("Number of rows: " + str(df.count()[0]))
+def display_data():
+    job_data = pd.read_csv("WorkUa.csv")
+    print(job_data)
+    print("Number of rows: " + str(job_data.shape[0]))
 
 
 if __name__ == "__main__":
-    get_data("https://www.work.ua/ru/jobs-remote/?page={}", 4)
-    show_data()
+    url = "https://www.work.ua/ru/jobs-remote/?page={}"
+    end_page = 4
+    job_data = scrape_data(url, end_page)
+    display_data()
